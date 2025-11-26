@@ -16,17 +16,17 @@
 
 ## 功能特色
 
-- ✅ 互動式 CLI：執行程式後，輸入站號、功能碼、起始位址與暫存器數量即可測試
-- ✅ 自行實作 Modbus RTU 封包組裝：
+-  互動式 CLI：執行程式後，輸入站號、功能碼、起始位址與暫存器數量即可測試
+-  自行實作 Modbus RTU 封包組裝：
   - Address + Function + Start Addr High/Low + Count High/Low + CRC Low/High
-- ✅ 內建 Modbus CRC-16 演算法：
+-  內建 Modbus CRC-16 演算法：
   - 初始值：`0xFFFF`
   - 多項式：`0xA001`
-- ✅ 封裝序列埠操作：
+-  封裝序列埠操作：
   - 開啟 `/dev/ttyM0`、設定 9600 8N1
   - 阻塞／非阻塞讀取
   - 調整 Baud rate、Parity、Data bits、Stop bits
-- ✅ 回應解析（`RTUresponse`）：
+-  回應解析（`RTUresponse`）：
   - 讀取 Byte Count
   - 逐筆解析 16-bit 暫存器數值
   - 顯示：
