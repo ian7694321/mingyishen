@@ -47,19 +47,3 @@ modbus-rtu-serial-demo/
 ├─ serial.h        # 串列埠 API 宣告與常數定義
 ├─ calCRC.c        # 獨立的 CRC-16 (Modbus) 計算函式
 └─ README.md       # 專案說明（本檔案）
-
-
-主要檔案說明
-demo.c
-
-呼叫 SerialOpen(0) 開啟 /dev/ttyM0
-
-透過 scanf 讀取使用者輸入：
-
-slaveAddr（uint8_t）
-
-functioncode（uint8_t）
-
-Addr（uint16_t）
-
-count（uint16_t）
