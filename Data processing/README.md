@@ -35,8 +35,8 @@ Data processing/
 ├─ Pie_Chart.py        # 對合併結果做統計，產生圓餅圖並嵌入 Excel
 ├─ excel_error_log.py  # 處理 Excel 錯誤／修復訊息的輔助工具（選用）
 └─ README.md           # 專案說明（本檔案）
+```
 
-```text
 
 ## 主要檔案說明
 
