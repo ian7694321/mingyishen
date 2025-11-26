@@ -1,17 +1,17 @@
-# mingyishen
-個人工作成就
+# Ming-Yi Shen (沈明毅)
 
-# Ming-Yi Shen – Work Automation & IoT Project Portfolio
-沈明毅｜資料處理自動化與設備通訊專案整理
+個人工作成就｜Work Automation & IoT Project Portfolio  
+專長：資料處理自動化、設備通訊、感測器資料紀錄、SQL 工時系統、Windows 服務與排程
 
-This document summarizes several side projects I developed during work, focusing on:
+This repository summarizes several side projects I developed during work, focusing on:
+
 - Excel / data processing automation
 - Equipment communication & sensor data logging
 - SQL-based time logging
 - Windows service & task scheduling
 
 Most of these tools were created to solve real problems in finance, manufacturing, and engineering workflows.  
-All sample data in the public repositories will be sanitized or simulated to avoid confidential information.
+All sample data in public repositories will be sanitized or simulated to avoid confidential information.
 
 ---
 
@@ -22,11 +22,12 @@ All sample data in the public repositories will be sanitized or simulated to avo
 
 **Role:** Sole developer – internal automation tool for accounting workflow.
 
-**Description:**
+**Description:**  
 A Python tool that automatically merges multiple Excel invoice files and calculates the *expected payment date* based on business rules.  
 It also compares the calculated date with the existing “system expected payment date” and generates a discrepancy report.
 
 **Key Features:**
+
 - Automatically scans a target folder and loads all invoice Excel files.
 - Supports multiple header formats and column name variants.
 - Automatically detects the header row containing fields such as:
@@ -45,11 +46,15 @@ It also compares the calculated date with the existing “system expected paymen
     - 基準與計算依據（哪一條付款條件規則）
 
 **Tech Stack:**
+
 - Python, `pandas`, `openpyxl`, `datetime`
 
 **Impact:**
+
 - Reduced manual checking time from **1–2 hours** to **a few minutes**.
 - Standardized payment-day rules and made them transparent in code and reports.
+
+> （未來獨立 Repo：`invoice-payment-date-checker`）
 
 ---
 
@@ -58,24 +63,26 @@ It also compares the calculated date with the existing “system expected paymen
 
 **Role:** Sole developer – reporting automation for financial data.
 
-**Description:**
+**Description:**  
 A reporting tool that reads merged invoice data, performs aggregation, and automatically generates charts (e.g., pie charts) embedded into Excel reports.
 
 **Key Features:**
-- Uses `pandas` to:
-  - Aggregate amounts by category (vendor, cost center, payment term, etc.).
-- Uses `matplotlib` to:
-  - Generate visualization such as pie charts or bar charts.
-- Uses `openpyxl` to:
-  - Insert generated charts into specific sheets and cells in the Excel file.
+
+- Uses `pandas` to aggregate amounts by category (vendor, cost center, payment term, etc.).
+- Uses `matplotlib` to generate visualizations such as pie charts or bar charts.
+- Uses `openpyxl` to insert generated charts into specific sheets and cells in the Excel file.
 - Designed to be used after the invoice merge tool, forming a small automation pipeline.
 
 **Tech Stack:**
+
 - Python, `pandas`, `matplotlib`, `openpyxl`
 
 **Value:**
+
 - Automates repetitive monthly/weekly reporting.
 - Provides visual reports that can be directly shared with non-technical colleagues and management.
+
+> （未來獨立 Repo：可與 1.1 同一專案或拆成 `invoice-report-dashboard`）
 
 ---
 
@@ -84,23 +91,28 @@ A reporting tool that reads merged invoice data, performs aggregation, and autom
 
 **Role:** Sole developer – generic data cleaning and merging tool.
 
-**Description:**
+**Description:**  
 A flexible Excel merging script designed to handle inconsistent formats from different sources.
 
 **Key Features:**
+
 - Supports multiple file name patterns and multiple sheets (`.xlsx`, `.xls`).
 - Automatically detects possible date columns, such as:
   - `憑單日期`, `憑單日`, `憑單日期(西元)`
 - Normalizes date values into a consistent format (`yyyy/mm/dd`).
 - Automatically adjusts column widths for readability.
-- Cleans invalid XML characters to avoid Excel warning messages like
+- Cleans invalid XML characters to avoid Excel warning messages like：
   - 「部分內容有問題，是否要嘗試修復？」
 
 **Tech Stack:**
+
 - Python, `pandas`, `openpyxl`, `re`, `datetime`
 
 **Usage Scenario:**
+
 - A standard “data cleaning + consolidation” utility that can be reused in various internal reporting tasks.
+
+> （未來獨立 Repo：例如 `excel-batch-merge-cleaner`）
 
 ---
 
@@ -111,16 +123,15 @@ A flexible Excel merging script designed to handle inconsistent formats from dif
 
 **Role:** Sole developer – TCP communication test and logging tool for HF5 devices.
 
-**Description:**
+**Description:**  
 A Python script that connects to a Rotronic HF5 temperature–humidity device via TCP socket, sends commands, parses the response, and logs sensor readings.
 
 **Key Features:**
+
 - Connects to HF5 using:
   - IP: `HF5_IP`
   - Port: `HF5_PORT`
-- Sends commands such as:
-  - `{00RDD}\r`  
-  to request readings from a specific address.
+- Sends commands such as `{00RDD}\r` to request readings from a specific address.
 - Parses raw ASCII responses and extracts:
   - Relative humidity (`%RH`)
   - Temperature (`°C`)
@@ -129,11 +140,15 @@ A Python script that connects to a Rotronic HF5 temperature–humidity device vi
   - Logs them to a file for later analysis
 
 **Tech Stack:**
+
 - Python, `socket`, `time`, string parsing
 
 **Use Case:**
+
 - Serves as an **environmental sensor logging demo**.
 - Can be open-sourced using fake IP and sample data to avoid confidential information.
+
+> （未來獨立 Repo：例如 `hf5-sensor-tcp-logger`）
 
 ---
 
@@ -142,29 +157,34 @@ A Python script that connects to a Rotronic HF5 temperature–humidity device vi
 
 **Role:** Developer and tester – research and prototype scripts for serial-based devices.
 
-**Description:**
+**Description:**  
 A collection of prototypes and test scripts for communicating with various temperature–humidity devices (Rotronic HC2, SATO, etc.) over serial ports.
 
 **Key Features:**
-- Uses Python `serial` library to connect to:
+
+- Uses Python `serial` library to connect to：
   - `/dev/ttyS*` on Linux
   - `COMx` on Windows
-- Implements and tests:
+- Implements and tests：
   - RO-ASCII and other vendor-specific serial protocols.
-- Parses device responses to display real-time:
+- Parses device responses to display real-time：
   - Temperature
   - Humidity
   - (Optional) Dew point
 - Includes a function to compute **dew point** from temperature and relative humidity.
 
 **Tech Stack:**
+
 - Python, `pyserial`, `math`, `datetime`
 
 **Value:**
-- Provides a small, practical example of:
+
+- Provides a small, practical example of：
   - Serial communication
   - Protocol parsing
   - Basic scientific calculation (dew point)
+
+> （未來獨立 Repo：例如 `env-sensor-serial-logger`）
 
 ---
 
@@ -173,17 +193,19 @@ A collection of prototypes and test scripts for communicating with various tempe
 
 **Role:** Troubleshooting and tool development.
 
-**Description:**
+**Description:**  
 An experimental project aiming to automate the download and parsing of log files from HF4 or similar devices, overcoming limitations of vendor tools (e.g., batch file constraints).
 
 **Key Points:**
+
 - Investigated vendor software behavior and limitations.
-- Explored possible ways to:
+- Explored possible ways to：
   - Automate log download process
   - Parse log formats into structured data
 - Planned to extend into a **generic device log downloader** once more device details are available.
 
 **Potential Future Work:**
+
 - Wrap into a reusable library or CLI tool.
 - Provide unified interface for multiple device types.
 
@@ -196,28 +218,33 @@ An experimental project aiming to automate the download and parsing of log files
 
 **Role:** Sole developer – internal tool for time logging and productivity tracking.
 
-**Description:**
+**Description:**  
 A Python script that connects to a time logging database (e.g., TSMC internal system) via ODBC/SQL, queries daily or range-based records, and exports the results.
 
 **Key Features:**
+
 - Uses ODBC/SQL to connect to the time logging database.
-- Executes parameterized SQL queries to:
+- Executes parameterized SQL queries to：
   - Retrieve work hours for a specific date or date range.
-- Writes output to:
+- Writes output to：
   - Text file (`.txt`)
   - Or Excel file (for further analysis)
-- Designed to run automatically via:
+- Designed to run automatically via：
   - Windows Task Scheduler (定時排程)
   - Windows Service (using `pywin32`)
 
 **Tech Stack:**
-- Python, `pyodbc` or equivalent ODBC library
-- SQL (SELECT queries)
+
+- Python, `pyodbc` or equivalent ODBC library  
+- SQL (SELECT queries)  
 - Windows environment integration
 
 **Impact:**
+
 - Reduces manual login and export operations.
 - Helps track personal and project-based work hours more systematically.
+
+> （未來獨立 Repo：例如 `tsmc-time-log-automation`，內文以假資料庫 / 假 Table 示意）
 
 ---
 
@@ -228,19 +255,21 @@ A Python script that connects to a time logging database (e.g., TSMC internal sy
 
 **Role:** Developer and maintainer.
 
-**Description:**
+**Description:**  
 A set of experiments and configurations to run Python scripts reliably in production-like environments on Windows.
 
 **Key Actions:**
-- Convert standalone Python scripts into:
+
+- Convert standalone Python scripts into：
   - Windows services using `pywin32`
   - Scheduled tasks via Windows Task Scheduler
-- Explore packaging with `pyinstaller` to generate `.exe` files:
+- Explore packaging with `pyinstaller` to generate `.exe` files：
   - Allows non-technical users to run tools without installing Python.
 - Handle permission and environment issues during installation and execution.
 
 **Value:**
-- Shows not only the ability to write scripts, but also:
+
+- Shows not only the ability to write scripts, but also：
   - How to integrate them into real-world IT environments.
   - How to consider deployment, stability, and usability for colleagues.
 
@@ -250,7 +279,5 @@ A set of experiments and configurations to run Python scripts reliably in produc
 
 **Author:** Ming-Yi Shen (沈明毅)  
 **Location:** Tainan, Taiwan  
-**GitHub:** _to be added_  
-**Email:** _to be added (optional)_
-
-
+**GitHub:** https://github.com/mingyishen  
+**Email:** _(optional)_
