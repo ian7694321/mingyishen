@@ -1,283 +1,350 @@
-# Ming-Yi Shen (沈明毅)
+# 沈明毅（Ming-Yi Shen）
 
 個人工作成就｜Work Automation & IoT Project Portfolio  
 專長：資料處理自動化、設備通訊、感測器資料紀錄、SQL 工時系統、Windows 服務與排程
 
-This repository summarizes several side projects I developed during work, focusing on:
+這份說明整理了我在工作期間自行開發的幾個實務專案與工具，主要聚焦在：
 
-- Excel / data processing automation
-- Equipment communication & sensor data logging
-- SQL-based time logging
-- Windows service & task scheduling
+- Excel／資料處理自動化
+- 設備通訊與感測器資料紀錄
+- SQL 工時系統自動化
+- Windows 服務與排程整合
 
-Most of these tools were created to solve real problems in finance, manufacturing, and engineering workflows.  
-All sample data in public repositories will be sanitized or simulated to avoid confidential information.
-
----
-
-## 1. Data Processing & Excel Automation Tools
-
-### 1.1 Excel Invoice Merge and Expected Payment Date Checker (Python)
-**Excel 憑單合併與「預計付款日」自動計算工具**
-
-**Role:** Sole developer – internal automation tool for accounting workflow.
-
-**Description:**  
-A Python tool that automatically merges multiple Excel invoice files and calculates the *expected payment date* based on business rules.  
-It also compares the calculated date with the existing “system expected payment date” and generates a discrepancy report.
-
-**Key Features:**
-
-- Automatically scans a target folder and loads all invoice Excel files.
-- Supports multiple header formats and column name variants.
-- Automatically detects the header row containing fields such as:
-  - `憑單日期`, `憑單單號`, `廠商簡稱`, `付款條件名稱`, ...
-- Calculates expected payment dates based on **付款條件** rules, for example:
-  - **Current month 18th payment**  
-    - If document date ≤ 18th → same month 18th  
-    - If document date > 18th → next month 18th
-  - **Next month 15th payment** (e.g., for 南科管理局)
-    - Expected payment date = document date’s next month 15th
-- Outputs:
-  - **Merged summary**: `TOTAL_YYYYMMDD_HHMM.xlsx`
-  - **Mismatch report** showing:
-    - System expected payment date vs. recalculated date
-    - Difference in days
-    - 基準與計算依據（哪一條付款條件規則）
-
-**Tech Stack:**
-
-- Python, `pandas`, `openpyxl`, `datetime`
-
-**Impact:**
-
-- Reduced manual checking time from **1–2 hours** to **a few minutes**.
-- Standardized payment-day rules and made them transparent in code and reports.
-
-> （未來獨立 Repo：`invoice-payment-date-checker`）
+實際程式大多來源於真實專案情境，用來解決財務、製造與工程現場的具體問題。  
+公開版本中會以「模擬資料／去識別化」方式呈現，避免公司與客戶機密外洩。
 
 ---
 
-### 1.2 Excel Invoice Statistics and Automatic Pie Chart Report
-**Excel 憑單統計與圓餅圖自動產生工具**
+## 1. 資料處理與 Excel 自動化專案
 
-**Role:** Sole developer – reporting automation for financial data.
+### 1.1 Excel 憑單合併與「預計付款日」自動計算工具（Python）
 
-**Description:**  
-A reporting tool that reads merged invoice data, performs aggregation, and automatically generates charts (e.g., pie charts) embedded into Excel reports.
+**角色：** 個人開發（會計流程自動化工具）
 
-**Key Features:**
+**簡介：**  
+使用 Python 自動合併多個 Excel 憑單檔，依照「付款條件」與「單據日期」自動計算「預計付款日」，  
+並與系統原有的預計付款日比對，產出「不一致明細」供會計人員檢查。
 
-- Uses `pandas` to aggregate amounts by category (vendor, cost center, payment term, etc.).
-- Uses `matplotlib` to generate visualizations such as pie charts or bar charts.
-- Uses `openpyxl` to insert generated charts into specific sheets and cells in the Excel file.
-- Designed to be used after the invoice merge tool, forming a small automation pipeline.
+**主要功能：**
 
-**Tech Stack:**
+- 自動掃描指定資料夾中的所有 Excel 憑單檔
+- 支援多種欄位名稱與表頭格式
+- 自動偵測表頭列（例如包含 `憑單日期、憑單單號、廠商簡稱、付款條件名稱…` 的那一列）
+- 依「付款條件名稱」計算預計付款日，例如：
+  - **當月 18 號付款**  
+    - 單據日期 ≤ 當月 18 號 → 預計付款日為當月 18 號  
+    - 單據日期 > 當月 18 號 → 預計付款日為次月 18 號
+  - **次月 15 號付款**（例如：南科管理局）
+    - 預計付款日固定為「單據日期的次月 15 號」
+- 輸出：
+  - 合併總表：`TOTAL_YYYYMMDD_HHMM.xlsx`
+  - 不一致明細表：顯示
+    - 系統預計付款日 vs 程式重新計算結果
+    - 相差天數
+    - 計算依據（對應哪一條付款條件規則）
 
-- Python, `pandas`, `matplotlib`, `openpyxl`
+**技術：**
 
-**Value:**
+- Python、`pandas`、`openpyxl`、`datetime`
 
-- Automates repetitive monthly/weekly reporting.
-- Provides visual reports that can be directly shared with non-technical colleagues and management.
+**效益：**
 
-> （未來獨立 Repo：可與 1.1 同一專案或拆成 `invoice-report-dashboard`）
+- 將原本需人工檢查的 1～2 小時作業，縮短為數分鐘內完成
+- 明確化「付款條件→算法」規則，減少人工判斷錯誤
+
+> 未來獨立 Repo 建議名稱：`invoice-payment-date-checker`
 
 ---
 
-### 1.3 Batch Excel Merge and Automatic Column Alignment Tool
-**多 Excel 檔批次合併與欄位自動對齊工具**
+### 1.2 Excel 憑單統計與圓餅圖自動產生工具
 
-**Role:** Sole developer – generic data cleaning and merging tool.
+**角色：** 個人開發（財務報表視覺化工具）
 
-**Description:**  
-A flexible Excel merging script designed to handle inconsistent formats from different sources.
+**簡介：**  
+在憑單合併完成後，自動進行統計分類並產生圖表（圓餅圖、長條圖），嵌入 Excel 報表，  
+方便管理階層與非技術同事檢視。
 
-**Key Features:**
+**主要功能：**
 
-- Supports multiple file name patterns and multiple sheets (`.xlsx`, `.xls`).
-- Automatically detects possible date columns, such as:
-  - `憑單日期`, `憑單日`, `憑單日期(西元)`
-- Normalizes date values into a consistent format (`yyyy/mm/dd`).
-- Automatically adjusts column widths for readability.
-- Cleans invalid XML characters to avoid Excel warning messages like：
+- 使用 `pandas` 聚合統計：
+  - 依廠商、成本中心、付款條件等分類金額
+- 使用 `matplotlib`：
+  - 自動繪製圓餅圖或長條圖
+- 使用 `openpyxl`：
+  - 將圖表嵌入指定工作表與儲存格位置
+- 可與「1.1 憑單合併工具」串成一條自動化流程
+
+**技術：**
+
+- Python、`pandas`、`matplotlib`、`openpyxl`
+
+**價值：**
+
+- 自動化每月／每週的重複統計與畫圖工作
+- 直接產出可對外展示的 Excel 報表
+
+> 可與 1.1 放同一專案，或獨立為：`invoice-report-dashboard`
+
+---
+
+### 1.3 多 Excel 檔批次合併與欄位自動對齊工具
+
+**角色：** 個人開發（通用資料清洗＋合併工具）
+
+**簡介：**  
+處理來自不同來源、格式不一致的 Excel 檔，製作一支通用的「批次合併＋整理」程式。
+
+**主要功能：**
+
+- 支援多種檔名規則與多個工作表（`.xlsx`、`.xls`）
+- 自動偵測可能的日期欄位名稱，例如：
+  - `憑單日期 / 憑單日 / 憑單日期(西元)`
+- 將日期統一格式化為 `yyyy/mm/dd`
+- 自動調整欄寬，提升可讀性
+- 去除不合法 XML 字元，避免 Excel 開啟時出現：
   - 「部分內容有問題，是否要嘗試修復？」
 
-**Tech Stack:**
+**技術：**
 
-- Python, `pandas`, `openpyxl`, `re`, `datetime`
+- Python、`pandas`、`openpyxl`、正則表達式、`datetime`
 
-**Usage Scenario:**
+**應用情境：**
 
-- A standard “data cleaning + consolidation” utility that can be reused in various internal reporting tasks.
+- 任意部門的「多檔案 → 一張總表」需求
+- 作為資料前處理步驟，銜接後續統計或視覺化
 
-> （未來獨立 Repo：例如 `excel-batch-merge-cleaner`）
-
----
-
-## 2. Equipment Communication & Sensor Data Logging
-
-### 2.1 HF5 Temperature and Humidity Sensor TCP Data Logger
-**HF5 溫溼度感測器 TCP 讀值與紀錄程式**
-
-**Role:** Sole developer – TCP communication test and logging tool for HF5 devices.
-
-**Description:**  
-A Python script that connects to a Rotronic HF5 temperature–humidity device via TCP socket, sends commands, parses the response, and logs sensor readings.
-
-**Key Features:**
-
-- Connects to HF5 using:
-  - IP: `HF5_IP`
-  - Port: `HF5_PORT`
-- Sends commands such as `{00RDD}\r` to request readings from a specific address.
-- Parses raw ASCII responses and extracts:
-  - Relative humidity (`%RH`)
-  - Temperature (`°C`)
-- Periodically reads values in a loop and:
-  - Prints formatted readings to console
-  - Logs them to a file for later analysis
-
-**Tech Stack:**
-
-- Python, `socket`, `time`, string parsing
-
-**Use Case:**
-
-- Serves as an **environmental sensor logging demo**.
-- Can be open-sourced using fake IP and sample data to avoid confidential information.
-
-> （未來獨立 Repo：例如 `hf5-sensor-tcp-logger`）
+> 建議 Repo 名稱：`excel-batch-merge-cleaner`
 
 ---
 
-### 2.2 Serial Communication and Logging for Temperature–Humidity Devices
-**Rotronic HC2 / SATO 等溫溼度設備串口通訊與資料記錄程式**
+## 2. 設備通訊與感測器資料記錄專案
 
-**Role:** Developer and tester – research and prototype scripts for serial-based devices.
+### 2.1 HF5 溫溼度感測器 TCP 讀值與紀錄程式（Python）
 
-**Description:**  
-A collection of prototypes and test scripts for communicating with various temperature–humidity devices (Rotronic HC2, SATO, etc.) over serial ports.
+**角色：** 個人開發（HF5 通訊測試與資料紀錄）
 
-**Key Features:**
+**簡介：**  
+透過 TCP Socket 與 Rotronic HF5 溫溼度感測器通訊，發送指令、解析回應並記錄量測數據。
 
-- Uses Python `serial` library to connect to：
-  - `/dev/ttyS*` on Linux
-  - `COMx` on Windows
-- Implements and tests：
-  - RO-ASCII and other vendor-specific serial protocols.
-- Parses device responses to display real-time：
-  - Temperature
-  - Humidity
-  - (Optional) Dew point
-- Includes a function to compute **dew point** from temperature and relative humidity.
+**主要功能：**
 
-**Tech Stack:**
+- 以 Python `socket` 連線至 HF5：
+  - IP：`HF5_IP`
+  - Port：`HF5_PORT`
+- 發送指令（例如：`{00RDD}\r`）讀取對應通道數據
+- 解析 ASCII 回應字串，擷取：
+  - 相對濕度（`%RH`）
+  - 溫度（`°C`）
+- 週期性讀值，並：
+  - 在終端機顯示格式化數值
+  - 寫入 log 檔，供日後分析
 
-- Python, `pyserial`, `math`, `datetime`
+**技術：**
 
-**Value:**
+- Python、`socket`、`time`、字串處理
 
-- Provides a small, practical example of：
-  - Serial communication
-  - Protocol parsing
-  - Basic scientific calculation (dew point)
+**應用：**
 
-> （未來獨立 Repo：例如 `env-sensor-serial-logger`）
+- 做為環境感測器資料紀錄 Demo
+- 公開版可使用假 IP 與模擬資料
 
----
-
-### 2.3 HF4 / Other Device Log Auto-Download and Analysis (Prototype)
-**HF4 / 其他設備 Log 自動下載與分析原型工具**
-
-**Role:** Troubleshooting and tool development.
-
-**Description:**  
-An experimental project aiming to automate the download and parsing of log files from HF4 or similar devices, overcoming limitations of vendor tools (e.g., batch file constraints).
-
-**Key Points:**
-
-- Investigated vendor software behavior and limitations.
-- Explored possible ways to：
-  - Automate log download process
-  - Parse log formats into structured data
-- Planned to extend into a **generic device log downloader** once more device details are available.
-
-**Potential Future Work:**
-
-- Wrap into a reusable library or CLI tool.
-- Provide unified interface for multiple device types.
+> 建議 Repo 名稱：`hf5-sensor-tcp-logger`
 
 ---
 
-## 3. SQL-Based Time Logging Automation
+### 2.2 Rotronic HC2／SATO 等設備的串口通訊與紀錄（Python）
 
-### 3.1 TSMC Time Logging Automation Tool (`tsmc_time_log.py`)
-**TSMC 工時系統資料自動撈取工具**
+**角色：** 個人開發與測試（串口通訊與露點計算）
 
-**Role:** Sole developer – internal tool for time logging and productivity tracking.
+**簡介：**  
+針對 Rotronic HC2、SATO 等溫溼度設備，透過 RS-232/RS-485 串口與自訂協定（如 RO-ASCII）進行通訊，  
+並撰寫測試程式即時顯示與紀錄數值。
 
-**Description:**  
-A Python script that connects to a time logging database (e.g., TSMC internal system) via ODBC/SQL, queries daily or range-based records, and exports the results.
+**主要功能：**
 
-**Key Features:**
+- 使用 `pyserial` 連接：
+  - Linux：`/dev/ttyS*`
+  - Windows：`COMx`
+- 實作／測試：
+  - RO-ASCII 等廠商協定
+- 解析回應資料並顯示：
+  - 溫度
+  - 濕度
+  - （可選）露點（dew point）
+- 實作露點計算函式，依溫度與相對濕度計算 dew point
 
-- Uses ODBC/SQL to connect to the time logging database.
-- Executes parameterized SQL queries to：
-  - Retrieve work hours for a specific date or date range.
-- Writes output to：
-  - Text file (`.txt`)
-  - Or Excel file (for further analysis)
-- Designed to run automatically via：
-  - Windows Task Scheduler (定時排程)
-  - Windows Service (using `pywin32`)
+**技術：**
 
-**Tech Stack:**
+- Python、`pyserial`、`math`、`datetime`
 
-- Python, `pyodbc` or equivalent ODBC library  
-- SQL (SELECT queries)  
-- Windows environment integration
+**價值：**
 
-**Impact:**
+- 實際練習「串口通訊＋協定解析＋科學計算」
+- 可延伸為更通用的環境感測器 Logger
 
-- Reduces manual login and export operations.
-- Helps track personal and project-based work hours more systematically.
-
-> （未來獨立 Repo：例如 `tsmc-time-log-automation`，內文以假資料庫 / 假 Table 示意）
+> 建議 Repo 名稱：`env-sensor-serial-logger`
 
 ---
 
-## 4. Deployment, Windows Service, and Scheduling
+### 2.3 HF4／其他設備 Log 自動下載與分析原型工具
 
-### 4.1 Python Automation Script as Windows Service / Scheduled Task
-**Python 自動化腳本服務化與排程**
+**角色：** 問題排除與工具雛形開發
 
-**Role:** Developer and maintainer.
+**簡介：**  
+研究 HF4 或類似設備的 log 下載方式，嘗試突破廠商軟體限制（例如一定要手動按批次檔），  
+目標是自動撈取 log 並解析為結構化資料。
 
-**Description:**  
-A set of experiments and configurations to run Python scripts reliably in production-like environments on Windows.
+**重點：**
 
-**Key Actions:**
+- 觀察廠商程式行為、通訊方式與限制
+- 嘗試：
+  - 自動化 log 下載流程
+  - 解析 log 格式並轉成可分析的欄位資料
+- 長期目標：做成「通用設備 log 下載器」
 
-- Convert standalone Python scripts into：
-  - Windows services using `pywin32`
-  - Scheduled tasks via Windows Task Scheduler
-- Explore packaging with `pyinstaller` to generate `.exe` files：
-  - Allows non-technical users to run tools without installing Python.
-- Handle permission and environment issues during installation and execution.
+**未來方向：**
 
-**Value:**
+- 打包成 CLI 工具或 Python 套件
+- 支援多種設備型號
 
-- Shows not only the ability to write scripts, but also：
-  - How to integrate them into real-world IT environments.
-  - How to consider deployment, stability, and usability for colleagues.
+> 建議 Repo 名稱：`device-log-downloader`
 
 ---
 
-## Contact
+### 2.4 Modbus RTU 串列通訊示範程式（C 語言）
 
-**Author:** Ming-Yi Shen (沈明毅)  
-**Location:** Tainan, Taiwan  
-**GitHub:** https://github.com/mingyishen  
-**Email:** _(optional)_
+**Role：** 個人開發（低階串列通訊與協定實作練習）
+
+**簡介：**  
+使用 C 語言實作 Modbus RTU 通訊 Demo，透過 `/dev/ttyM0`（或其他對應序列埠）與 Modbus 設備互動。  
+程式透過使用者輸入參數建構 RTU 訊框、送出並解析回應。
+
+**使用流程：**
+
+1. 執行程式後，由使用者輸入：
+   - Slave Address（站號）
+   - Function Code（功能碼，例如 3：讀取保持暫存器）
+   - Start Address（起始暫存器位址）
+   - Count（讀取暫存器數量）
+2. 程式組出 **8 bytes** 的 Modbus RTU Request：
+   - [0]：Slave Address  
+   - [1]：Function Code  
+   - [2]：Start Address High  
+   - [3]：Start Address Low  
+   - [4]：Count High  
+   - [5]：Count Low  
+   - [6]：CRC Low  
+   - [7]：CRC High  
+3. 透過序列埠送出，再讀取設備回應
+4. 將收到的資料：
+   - 以十進位列印每一個 byte
+   - 解析 byte count 與每一組 16-bit 暫存器數值
+   - 顯示：
+     - `valueN`：第 N 筆數值（十進位）
+     - `Hex`：同一數值的十六進位
+     - `scale0.1`：將數值除以 10（對應設備一位小數表示）
+
+**主要程式檔：**
+
+- `demo.c`：主程式，處理使用者輸入、送出封包、接收回應
+- `RTU.c`：負責組 Modbus RTU 封包、計算 CRC、顯示與解析回應
+- `serial.c`／`serial.h`：封裝序列埠操作（開啟、設定、讀寫、流量控制…）
+- `calCRC.c`：獨立的 Modbus CRC-16 計算函式
+
+**序列埠設定（在 `serial.c` 中預設）：**
+
+- 裝置：`/dev/ttyM0`（port 0）
+- 傳輸速率：9600 bps
+- 資料位元：8
+- 奇偶校驗：None
+- 停止位元：1
+- 讀取模式：阻塞直到讀到至少 1 byte
+
+**技術：**
+
+- C 語言（gcc）
+- POSIX 串列埠 API：`termios`、`ioctl`、`fcntl`
+- Modbus RTU 訊框格式與 CRC-16（初始值 0xFFFF，多項式 0xA001）
+
+**價值：**
+
+- 展示對「二進位通訊協定」與「實體串列埠操作」的理解
+- 可作為工業自動化、PLC/設備整合的範例
+- 也適合教學或分享給入門工程師參考
+
+> 建議獨立 Repo 名稱：`modbus-rtu-serial-demo` 或 `modbus-rtu-serial-communication`
+
+---
+
+## 3. SQL 工時系統自動化專案
+
+### 3.1 TSMC 工時系統資料自動撈取工具（`tsmc_time_log.py`）
+
+**角色：** 個人開發（工時管理與自我紀錄工具）
+
+**簡介：**  
+透過 ODBC/SQL 連線至工時系統資料庫（例如 TSMC 內部系統），  
+自動查詢每日或區間工時紀錄並輸出成文字或 Excel 檔。
+
+**主要功能：**
+
+- 使用 ODBC/SQL 連線工時系統資料庫
+- 撰寫參數化 SQL 查詢：
+  - 依日期或區間撈取工時資料
+- 將查詢結果輸出為：
+  - 純文字檔（`.txt`）
+  - 或 Excel（方便後續分析或製成圖表）
+- 可搭配：
+  - Windows 排程器（Task Scheduler）每天固定時間執行
+  - Windows Service（配合 `pywin32`）常駐執行
+
+**技術：**
+
+- Python、`pyodbc`（或其他 ODBC 函式庫）
+- SQL（SELECT、條件查詢）
+- Windows 環境自動化整合
+
+**效益：**
+
+- 不需每天人工登入系統下載資料
+- 更容易追蹤個人與專案工時分配
+
+> 建議 Repo 名稱：`tsmc-time-log-automation`（示範版會以假資料庫／假 Table 模擬）
+
+---
+
+## 4. 部署、Windows 服務與排程整合
+
+### 4.1 Python 自動化腳本服務化與排程
+
+**角色：** 開發與維運
+
+**簡介：**  
+將原本「手動執行」的 Python 腳本，部署成較穩定、可自動執行的形式，  
+包含 Windows Service、排程與包成 `.exe` 給非技術同事使用。
+
+**主要工作：**
+
+- 使用 `pywin32` 將 Python 腳本註冊成 Windows Service
+- 使用 Windows Task Scheduler 設定排程（每日固定時間執行）
+- 使用 `pyinstaller` 將腳本打包成可執行檔（`.exe`）：
+  - 讓沒有安裝 Python 的同事也可以一鍵執行
+- 處理安裝與執行過程中的：
+  - 權限問題（如需管理員身分）
+  - 環境變數與路徑設定
+  - 例外狀況與 log 紀錄
+
+**價值：**
+
+- 展現的不只是「會寫程式」，而是：
+  - 知道怎麼把程式部署到真正的工作環境
+  - 會考慮穩定性、易用性與同事實際使用情境
+
+---
+
+## 聯絡方式（Contact）
+
+**作者：** 沈明毅（Ming-Yi Shen）  
+**地點：** 台南，台灣  
+**GitHub：** https://github.com/mingyishen  
+**Email：** （可視需要自行填寫）
