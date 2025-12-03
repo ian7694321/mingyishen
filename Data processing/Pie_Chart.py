@@ -190,10 +190,13 @@ def _read_one_excel_file(f: Path) -> dict:
     # header=None：讓我們自己找哪一列是欄名
     return pd.read_excel(f, sheet_name=None, header=None)
 
-def read_latest_excel_in_dir(folder: Path) -> pd.DataFrame:
+def read_latest_excel_in_dir(folder: Path) -> pd.DataFrame | None:
     files = _collect_excel_files(folder)
     if not files:
-        raise RuntimeError(f"資料夾 {folder} 中沒有 Excel。")
+        # 這裡不要中斷整個程式，改成略過這個資料夾
+        print(f"[SKIP] 資料夾 {folder.name} 中沒有 Excel 檔，已略過。")
+        return None
+
     latest = max(files, key=lambda p: p.stat().st_mtime)
     print(f"使用最新檔：{latest.relative_to(folder).as_posix()}")
 
@@ -224,6 +227,7 @@ def read_latest_excel_in_dir(folder: Path) -> pd.DataFrame:
         print(f"工作表：{first_sheet}")
         print("欄位清單：", list(first_df.iloc[0]))
         print("=======================================")
+        # 這種屬於資料問題，維持 raise，讓你知道這個檔案有問題
         raise RuntimeError(f"{latest} 無任何符合欄位的工作表。")
 
     return pd.concat(frames, ignore_index=True)
@@ -311,14 +315,23 @@ def aggregate(df_all: pd.DataFrame) -> pd.DataFrame:
 # =========================
 # 畫圖 + 嵌入 Excel
 # =========================
-def save_summary_and_plot(agg: pd.DataFrame, out_dir: Path, tag: str, ts: str):
+def save_summary_and_plot(df_all: pd.DataFrame, agg: pd.DataFrame, out_dir: Path, tag: str, ts: str):
+    """
+    df_all : 原始明細（已經標準化欄位名稱，至少有 CATEGORY_COL / VALUE_COL）
+    agg    : 依 CATEGORY_COL 彙總後的 DataFrame（aggregate() 的結果）
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
+    img_dir = out_dir / "img"
+    img_dir.mkdir(parents=True, exist_ok=True)
     out_xlsx = out_dir / f"summary_{tag}_{ts}.xlsx"
 
     set_chinese_font()
     total = agg[VALUE_COL].sum()
     pct_list = (agg[VALUE_COL] / total * 100).tolist()
 
+    # ========================
+    # 主圓餅圖（維持原本樣式：圓餅 + 右表 + 總金額）
+    # ========================
     fig, ax = plt.subplots(figsize=(11, 8))
     wedges, texts, autotexts = ax.pie(
         agg[VALUE_COL],
@@ -330,6 +343,7 @@ def save_summary_and_plot(agg: pd.DataFrame, out_dir: Path, tag: str, ts: str):
     )
     colors = [w.get_facecolor() for w in wedges]
 
+    # 右側表格（全部分類）
     table_data = [
         ["■", cat, f"{val:,.0f} TWD", f"{pct:.1f}%"]
         for cat, val, pct in zip(agg[CATEGORY_COL], agg[VALUE_COL], pct_list)
@@ -337,8 +351,12 @@ def save_summary_and_plot(agg: pd.DataFrame, out_dir: Path, tag: str, ts: str):
     col_labels = ["", "分類名稱", "金額 (TWD)", "占比 (%)"]
 
     table = plt.table(
-        cellText=table_data, colLabels=col_labels, colLoc="center", cellLoc="center",
-        loc="right", bbox=[1.03, 0.08, 0.55, 0.82],
+        cellText=table_data,
+        colLabels=col_labels,
+        colLoc="center",
+        cellLoc="center",
+        loc="right",
+        bbox=[1.03, 0.05, 0.55, 0.82],  # 拉回比較高，跟原本類似
     )
     table.auto_set_font_size(False)
     table.set_fontsize(9)
@@ -347,19 +365,124 @@ def save_summary_and_plot(agg: pd.DataFrame, out_dir: Path, tag: str, ts: str):
         cell.get_text().set_color(color)
         cell.get_text().set_fontweight("bold")
 
+    # 只留「總金額」這一行
     plt.text(
         1.03, 0.93, f"總金額：{total:,.0f} TWD",
-        transform=ax.transAxes, fontsize=11, fontweight="bold",
-        ha="left", va="center"
+        transform=ax.transAxes,
+        fontsize=11,
+        fontweight="bold",
+        ha="left",
+        va="center",
     )
+
     ax.set_title(f"{tag}｜{CATEGORY_COL} 對應 {VALUE_COL}", fontsize=13, pad=20)
     ax.axis("equal")
 
-    out_png = out_dir / f"pie_{tag}_{ts}.png"
+    # 主圓餅圖圖片檔
+    out_png = img_dir / f"pie_{tag}_{ts}.png"
     plt.savefig(out_png, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
+    # ========================
+    # 前 3 名付款條件（只做計算，不在主圖上畫文字）
+    # ========================
+    top_n = min(3, len(agg))
+    top_df = None
+    if top_n > 0:
+        top_rows = agg.iloc[:top_n].copy()
+        pct_top = (top_rows[VALUE_COL] / total * 100) if total else 0
+
+        top_df = pd.DataFrame({
+            "排名": [i + 1 for i in range(top_n)],
+            CATEGORY_COL: top_rows[CATEGORY_COL].tolist(),
+            VALUE_COL: top_rows[VALUE_COL].tolist(),
+            "占比 (%)": [round(p, 1) for p in pct_top.tolist()],
+        })
+
+    # ========================
+    # 額外一張圖：前三名付款條件橫條圖（放在 Top3 工作表）
+    # ========================
+    out_png_top3 = None
+    if top_n > 0 and top_df is not None:
+        fig2, ax2 = plt.subplots(figsize=(6, 4))
+
+        ax2.barh(top_df[CATEGORY_COL], top_df[VALUE_COL])
+        ax2.invert_yaxis()  # 第一名在最上面
+        ax2.set_xlabel("金額 (TWD)")
+        ax2.set_title(f"{tag} 前 {top_n} 名付款條件")
+
+        for i, (val, pct) in enumerate(zip(top_df[VALUE_COL], top_df["占比 (%)"])):
+            ax2.text(
+                val, i,
+                f"{val:,.0f} TWD（{pct:.1f}%）",
+                va="center",
+                ha="left",
+                fontsize=9,
+            )
+
+        fig2.tight_layout()
+        out_png_top3 = img_dir / f"top3_{tag}_{ts}.png"
+        fig2.savefig(out_png_top3, dpi=300, bbox_inches="tight")
+        plt.close(fig2)
+
+    # ========================
+    # 每一個前 3 名付款條件內的「廠商佔比」
+    # 佔比母體 = 該付款條件自己的金額小計
+    # ========================
+    VENDOR_COL_CANDIDATES = ["廠商簡稱", "廠商名稱", "供應商名稱", "廠商代號", "供應商代號"]
+    vendor_col = None
+    for c in VENDOR_COL_CANDIDATES:
+        if c in df_all.columns:
+            vendor_col = c
+            break
+
+    vendor_sections: list[tuple[str, pd.DataFrame]] = []
+
+    if vendor_col is not None and top_n > 0:
+        top3_terms = agg[CATEGORY_COL].head(top_n).tolist()
+
+        for term in top3_terms:
+            tmp = df_all[df_all[CATEGORY_COL] == term][[vendor_col, VALUE_COL]].copy()
+            if tmp.empty:
+                continue
+
+            tmp[vendor_col] = tmp[vendor_col].astype(str).str.strip()
+            tmp.loc[tmp[vendor_col] == "", vendor_col] = pd.NA
+
+            raw_val = (
+                tmp[VALUE_COL]
+                .astype(str)
+                .str.replace(",", "", regex=False)
+                .str.strip()
+            )
+            raw_val = raw_val.replace("", pd.NA)
+            tmp[VALUE_COL] = pd.to_numeric(raw_val, errors="coerce")
+
+            tmp = tmp.dropna(subset=[vendor_col, VALUE_COL])
+            if tmp.empty:
+                continue
+
+            df_term = (
+                tmp
+                .groupby(vendor_col, as_index=False)[VALUE_COL]
+                .sum()
+                .sort_values(VALUE_COL, ascending=False, ignore_index=True)
+            )
+
+            term_total = df_term[VALUE_COL].sum()
+            if term_total > 0:
+                df_term["占比 (%)"] = df_term[VALUE_COL] / term_total * 100
+            else:
+                df_term["占比 (%)"] = 0.0
+
+            df_term.insert(0, CATEGORY_COL, term)
+            vendor_sections.append((term, df_term))
+
+    # ========================
+    # 輸出 Excel：Summary + Top3
+    # ========================
     with pd.ExcelWriter(out_xlsx, engine="xlsxwriter") as writer:
+        # Summary 工作表：全部彙總 + 主圓餅圖
         agg.to_excel(writer, index=False, sheet_name="Summary")
         wb = writer.book
         ws = writer.sheets["Summary"]
@@ -373,12 +496,52 @@ def save_summary_and_plot(agg: pd.DataFrame, out_dir: Path, tag: str, ts: str):
             scale = 0.5
         scale = max(scale, 0.05)
 
-        anchor = ANCHOR_CELL if not PLACE_BELOW_DATA else f"A{len(agg)+3}"
+        anchor = ANCHOR_CELL if not PLACE_BELOW_DATA else f"A{len(agg) + 3}"
         ws.insert_image(anchor, str(out_png), {
             "x_scale": scale,
             "y_scale": scale,
             "object_position": 1,
         })
+
+        # Top3 工作表：前 3 名付款條件 + Top3 圖 + 各付款條件內廠商佔比
+        if top_n > 0 and top_df is not None:
+            sheet_name_top = "Top3"
+            top_df.to_excel(writer, index=False, sheet_name=sheet_name_top)
+            ws_top = writer.sheets[sheet_name_top]
+
+            ws_top.set_column("A:A", 6)   # 排名
+            ws_top.set_column("B:B", 25)  # 付款條件名稱
+            ws_top.set_column("C:C", 18)  # 金額
+            ws_top.set_column("D:D", 12)  # 占比
+
+            if out_png_top3 is not None:
+                ws_top.insert_image("F2", str(out_png_top3), {
+                    "x_scale": scale,
+                    "y_scale": scale,
+                    "object_position": 1,
+                })
+
+            # 下面依序寫入每一個前 3 名付款條件的廠商佔比
+            start_row = len(top_df) + 4
+
+            for term, df_term in vendor_sections:
+                title = f"{term} 內各廠商佔比（以該付款條件金額小計為母體）"
+                ws_top.write(start_row, 0, title)
+
+                df_term.to_excel(
+                    writer,
+                    sheet_name=sheet_name_top,
+                    startrow=start_row + 1,
+                    index=False
+                )
+
+                ws_top.set_column("A:A", 20)  # 付款條件名稱
+                ws_top.set_column("B:B", 25)  # 廠商
+                ws_top.set_column("C:C", 18)  # 金額
+                ws_top.set_column("D:D", 12)  # 占比
+
+                start_row += len(df_term) + 4
+
     print(f"{tag} 完成：{out_xlsx}")
 
 # =========================
@@ -395,10 +558,15 @@ def main():
         folder = base / sub
         if not folder.exists():
             continue
+
         print(f"處理：{sub}（讀取模式：最新檔）")
         df_all = read_latest_excel_in_dir(folder)
+        if df_all is None:
+            # 例如該資料夾空的，就跳過
+            continue
+
         agg = aggregate(df_all)
-        save_summary_and_plot(agg, base / "out" / sub, sub, ts)
+        save_summary_and_plot(df_all, agg, base / "out" / sub, sub, ts)
 
 if __name__ == "__main__":
     main()
