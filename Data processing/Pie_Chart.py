@@ -42,7 +42,7 @@ def get_target_dirs(base: Path):
 CATEGORY_COL = "付款條件名稱"
 VALUE_COL = "本幣貨款金額"
 TOP_K = 10
-IMG_SCALE = 0.5
+IMG_SCALE = 0.8
 ANCHOR_CELL = "E2"
 PLACE_BELOW_DATA = False
 PCT_MIN_IN_CHART = 2.0
@@ -321,8 +321,10 @@ def save_summary_and_plot(df_all: pd.DataFrame, agg: pd.DataFrame, out_dir: Path
     agg    : 依 CATEGORY_COL 彙總後的 DataFrame（aggregate() 的結果）
     """
     out_dir.mkdir(parents=True, exist_ok=True)
+    # 圖片專用資料夾
     img_dir = out_dir / "img"
     img_dir.mkdir(parents=True, exist_ok=True)
+
     out_xlsx = out_dir / f"summary_{tag}_{ts}.xlsx"
 
     set_chinese_font()
@@ -356,7 +358,7 @@ def save_summary_and_plot(df_all: pd.DataFrame, agg: pd.DataFrame, out_dir: Path
         colLoc="center",
         cellLoc="center",
         loc="right",
-        bbox=[1.03, 0.05, 0.55, 0.82],  # 拉回比較高，跟原本類似
+        bbox=[1.03, 0.05, 0.55, 0.82],
     )
     table.auto_set_font_size(False)
     table.set_fontsize(9)
@@ -378,7 +380,7 @@ def save_summary_and_plot(df_all: pd.DataFrame, agg: pd.DataFrame, out_dir: Path
     ax.set_title(f"{tag}｜{CATEGORY_COL} 對應 {VALUE_COL}", fontsize=13, pad=20)
     ax.axis("equal")
 
-    # 主圓餅圖圖片檔
+    # 主圓餅圖圖片檔 → img 資料夾
     out_png = img_dir / f"pie_{tag}_{ts}.png"
     plt.savefig(out_png, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -478,6 +480,71 @@ def save_summary_and_plot(df_all: pd.DataFrame, agg: pd.DataFrame, out_dir: Path
             df_term.insert(0, CATEGORY_COL, term)
             vendor_sections.append((term, df_term))
 
+     # ========================
+    # 第一名付款條件（例如 月結120天）各廠商圓餅圖
+    # 小於 10% 的 slice 不在圖上顯示文字，
+    # 右邊用顏色對照表列出 廠商 + 占比
+    # ========================
+    out_png_top1_pie = None
+    if vendor_sections and vendor_col is not None:
+        first_term, first_df = vendor_sections[0]
+
+        # 如果沒有「占比 (%)」欄，就自己算一次
+        if "占比 (%)" in first_df.columns:
+            pct_vendor = first_df["占比 (%)"].to_list()
+        else:
+            term_total = first_df[VALUE_COL].sum()
+            pct_vendor = (
+                (first_df[VALUE_COL] / term_total * 100).to_list()
+                if term_total else [0.0] * len(first_df)
+            )
+
+        values = first_df[VALUE_COL].to_list()
+        names = first_df[vendor_col].astype(str).to_list()
+
+        # 做寬一點，右邊放顏色對照表
+        fig3, ax3 = plt.subplots(figsize=(8, 4))
+
+        wedges, _, autotexts = ax3.pie(
+            values,
+            labels=None,  # 廠商名稱不要貼在餅上
+            autopct=lambda p: f"{p:.1f}%" if p >= 10 else "",  # <10% 不顯示
+            startangle=90,
+            pctdistance=0.8,
+            wedgeprops={"width": 0.6, "edgecolor": "white"},
+        )
+        ax3.set_title(f"{first_term} 各廠商佔比", fontsize=11, pad=10)
+        ax3.axis("equal")
+
+        # 右邊顏色對照表：顏色方塊 + 廠商 + 占比
+        colors = [w.get_facecolor() for w in wedges]
+        table_data = [
+            ["■", name, f"{pct:.1f}%"]
+            for name, pct in zip(names, pct_vendor)
+        ]
+        col_labels = ["", "廠商", "占比 (%)"]
+
+        tbl = plt.table(
+            cellText=table_data,
+            colLabels=col_labels,
+            colLoc="center",
+            cellLoc="center",
+            loc="right",
+            bbox=[1.05, 0.1, 0.5, 0.8],
+        )
+        tbl.auto_set_font_size(False)
+        tbl.set_fontsize(8)
+
+        # 把第一欄「■」上色，對應 wedge 顏色
+        for i, color in enumerate(colors):
+            cell = tbl[(i + 1, 0)]  # 第 0 列是表頭，所以從 1 開始
+            cell.get_text().set_color(color)
+            cell.get_text().set_fontweight("bold")
+
+        out_png_top1_pie = img_dir / f"top1_{tag}_{ts}.png"
+        plt.savefig(out_png_top1_pie, dpi=300, bbox_inches="tight")
+        plt.close(fig3)
+
     # ========================
     # 輸出 Excel：Summary + Top3
     # ========================
@@ -503,7 +570,7 @@ def save_summary_and_plot(df_all: pd.DataFrame, agg: pd.DataFrame, out_dir: Path
             "object_position": 1,
         })
 
-        # Top3 工作表：前 3 名付款條件 + Top3 圖 + 各付款條件內廠商佔比
+        # Top3 工作表：前 3 名付款條件 + Top3 圖 + 各付款條件內廠商佔比 + 第一名圓餅圖
         if top_n > 0 and top_df is not None:
             sheet_name_top = "Top3"
             top_df.to_excel(writer, index=False, sheet_name=sheet_name_top)
@@ -514,8 +581,17 @@ def save_summary_and_plot(df_all: pd.DataFrame, agg: pd.DataFrame, out_dir: Path
             ws_top.set_column("C:C", 18)  # 金額
             ws_top.set_column("D:D", 12)  # 占比
 
+            # 插入「付款條件 Top3」橫條圖
             if out_png_top3 is not None:
                 ws_top.insert_image("F2", str(out_png_top3), {
+                    "x_scale": scale,
+                    "y_scale": scale,
+                    "object_position": 1,
+                })
+
+            # 插入「第一名付款條件各廠商圓餅圖」，放在 Top3 圖下面一點
+            if out_png_top1_pie is not None:
+                ws_top.insert_image("F20", str(out_png_top1_pie), {
                     "x_scale": scale,
                     "y_scale": scale,
                     "object_position": 1,
@@ -543,6 +619,7 @@ def save_summary_and_plot(df_all: pd.DataFrame, agg: pd.DataFrame, out_dir: Path
                 start_row += len(df_term) + 4
 
     print(f"{tag} 完成：{out_xlsx}")
+
 
 # =========================
 # 主程式
